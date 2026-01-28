@@ -1,6 +1,7 @@
 # share
 
 A Rust utility for sharing data over lan networks.
+**Note:** Compilation may take a while due to optimization flags defined in `Cargo.toml` and `.cargo/config.toml`.
 
 ## Installation
 
@@ -12,8 +13,6 @@ cargo install --git https://github.com/AlpakaKuh/share.git
 ```bash
 share -h
 ```
-
-**Note:** Compilation may take a while due to optimization flags defined in `Cargo.toml` and `.cargo/config.toml`.
 
 ## Status (W.I.P)
 
