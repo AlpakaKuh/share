@@ -8,8 +8,8 @@ pub struct Args {
     #[arg(required_unless_present = "upload")]
     pub file: Option<String>,
 
-    /// Port to bind
-    #[arg(short, long, default_value_t = 8080)]
+    /// Port to bind, 0 to use next free
+    #[arg(short, long, default_value_t = 0)]
     pub port: u16,
 
     /// Auto copy share link to clipboard

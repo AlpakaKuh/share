@@ -24,27 +24,27 @@ async fn main() {
 
     let lan_ip = local_ip().expect("Failed to determine local IP address");
     let path = format!("/{}", Uuid::new_v4());
-    let display_addr = SocketAddr::new(lan_ip, args.port);
     let bind_addr = SocketAddr::from(([0, 0, 0, 0], args.port));
-
-    let url = format!("http://{display_addr}{path}");
 
     let app = Router::new()
         .route(&path, get(handler))
         .with_state(file_path);
 
     let listener = tokio::net::TcpListener::bind(bind_addr).await.unwrap();
+    let port = listener.local_addr().unwrap().port();
+    let display_addr = SocketAddr::new(lan_ip, port);
+    let url = format!("http://{display_addr}{path}");
 
     if args.file.is_some() {
         println!("File reachable under:\n{url}");
         if args.copy {
             let mut clipboard = Clipboard::new().unwrap();
-            clipboard.set_text(url).unwrap();
+            clipboard.set_text(&url).unwrap();
         }
     }
 
     if args.upload {
-        println!("Listening for uploads on port {}", args.port);
+        println!("Listening for uploads on {}", &url);
     }
 
     axum::serve(listener, app).await.unwrap();
