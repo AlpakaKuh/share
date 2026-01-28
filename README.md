@@ -21,3 +21,4 @@ The following features are currently under development:
 - Correct error handling
 - TLS (runtime AND static certs)
 - Folder sharing (provide webui)
+- Config to change defaults
