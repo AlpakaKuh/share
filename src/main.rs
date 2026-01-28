@@ -2,9 +2,10 @@ mod args;
 use arboard::Clipboard;
 use axum::{Router, extract::State, http::StatusCode, response::Response, routing::get};
 use axum::{body::Body, http::header};
+use axum_server::tls_rustls::RustlsConfig;
 use clap::Parser;
 use local_ip_address::local_ip;
-use std::net::SocketAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::path::Path;
 use tokio_util::io::ReaderStream;
 use uuid::Uuid;
@@ -23,7 +24,13 @@ async fn main() {
     }
 
     let lan_ip = local_ip().expect("Failed to determine local IP address");
-    let path = format!("/{}", Uuid::new_v4());
+    let path;
+    if args.randomized {
+        path = format!("/{}", Uuid::new_v4());
+    } else {
+        path = format!("/{}", args.file.clone().unwrap());
+    }
+
     let bind_addr = SocketAddr::from(([0, 0, 0, 0], args.port));
 
     let app = Router::new()
@@ -33,7 +40,8 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(bind_addr).await.unwrap();
     let port = listener.local_addr().unwrap().port();
     let display_addr = SocketAddr::new(lan_ip, port);
-    let url = format!("http://{display_addr}{path}");
+    let proto = if args.tls { "https" } else { "http" };
+    let url = format!("{proto}://{display_addr}{path}");
 
     if args.file.is_some() {
         println!("File reachable under:\n{url}");
@@ -47,7 +55,40 @@ async fn main() {
         println!("Listening for uploads on {}", &url);
     }
 
-    axum::serve(listener, app).await.unwrap();
+    if args.tls {
+        let config = tls_config_helper(lan_ip).await;
+        axum_server::from_tcp_rustls(listener.into_std().unwrap(), config)
+            .unwrap()
+            .serve(app.into_make_service())
+            .await
+            .unwrap();
+    } else {
+        axum_server::from_tcp(listener.into_std().unwrap())
+            .unwrap()
+            .serve(app.into_make_service())
+            .await
+            .unwrap();
+    }
+}
+
+async fn tls_config_helper(lan_ip: IpAddr) -> RustlsConfig {
+    let mut params = rcgen::CertificateParams::default();
+    params
+        .subject_alt_names
+        .push(rcgen::SanType::IpAddress(lan_ip));
+
+    let key_pair = rcgen::KeyPair::generate().expect("Failed to generate key pair");
+    let cert = params
+        .self_signed(&key_pair)
+        .expect("Failed to sign certificate");
+
+    let cert_der = cert.der().to_vec();
+    let key_der = key_pair.serialize_der();
+
+    let config = RustlsConfig::from_der(vec![cert_der], key_der)
+        .await
+        .expect("Failed to create RustlsConfig");
+    config
 }
 
 async fn handler(State(file_path): State<String>) -> Result<Response<Body>, (StatusCode, String)> {

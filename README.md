@@ -19,6 +19,6 @@ share -h
 The following features are currently under development:
 - Upload functionality
 - Correct error handling
-- TLS (runtime AND static certs)
+- TLS (static certs)
 - Folder sharing (provide webui)
 - Config to change defaults
