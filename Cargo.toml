@@ -6,7 +6,7 @@ edition = "2024"
 [profile.release]
 panic = "abort"
 lto = "fat"
-opt-level = "s"
+opt-level = "z"
 strip = true
 codegen-units = 1
 
